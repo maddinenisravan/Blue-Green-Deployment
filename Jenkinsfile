@@ -8,7 +8,7 @@ pipeline {
     }
     
     environment {
-        IMAGE_NAME = "adijaiswal/bankapp"
+        IMAGE_NAME = "sravan/bankapp"
         TAG = "${params.DOCKER_TAG}"  // The image tag now comes from the parameter
         KUBE_NAMESPACE = 'webapps'
         SCANNER_HOME= tool 'sonar-scanner'
@@ -20,26 +20,48 @@ pipeline {
                 checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/maddinenisravan/Blue-Green-Deployment.git']])
             }
         }
-     stages {
         stage('compile') {
             steps {
                 sh "mvn compile"
             }
-        }   
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar') {
-                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=nodejsmysql -Dsonar.projectName=nodejsmysql"
-                }
-            }
         }
-        
+        stage('Test') {
+            steps {
+                sh "mvn test -DskipTests=true"
+            }
+        } 
         stage('Trivy FS Scan') {
             steps {
                 sh "trivy fs --format table -o fs.html ."
             }
         }
-        
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=bluegreen -Dsonar.projectName=bluegreen -Dsonar.java.binaries=target"
+                }
+            }
+        }
+        stage('Quality Gate Check') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: false
+                }
+                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=bluegreen -Dsonar.projectName=bluegreen -Dsonar.java.binaries=target"
+                }
+            }
+        stage('Build') {
+            steps {
+                sh "mvn package -DskipTests=true"
+            }
+        }
+        stage('Publish Artifacts to Nexus') {
+            steps {
+                withMaven(globalMavenSettingsConfig: 'maven-settings', traceability: true) {
+                    sh "mvn deploy -DskipTests=true"                        
+               }
+            }
+        }
         stage('Docker build') {
             steps {
                 script {
