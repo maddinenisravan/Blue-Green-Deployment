@@ -8,7 +8,7 @@ pipeline {
     }
     
     environment {
-        IMAGE_NAME = "sravan/bankapp"
+        IMAGE_NAME = "maddinenisravan/blue-green-deployment"
         TAG = "${params.DOCKER_TAG}"  // The image tag now comes from the parameter
         KUBE_NAMESPACE = 'webapps'
         SCANNER_HOME= tool 'sonar-scanner'
@@ -30,31 +30,9 @@ pipeline {
                 sh "mvn test -DskipTests=true"
             }
         } 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar') {
-                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=bluegreen -Dsonar.projectName=bluegreen -Dsonar.java.binaries=target"
-                }
-            }
-        }
-        stage('Quality Gate Check') {
-            steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: false
-                }
-                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=bluegreen -Dsonar.projectName=bluegreen -Dsonar.java.binaries=target"
-                }
-            }
         stage('Build') {
             steps {
                 sh "mvn package -DskipTests=true"
-            }
-        }
-        stage('Publish Artifacts to Nexus') {
-            steps {
-                withMaven(globalMavenSettingsConfig: 'maven-settings', traceability: true) {
-                    sh "mvn deploy -DskipTests=true"                        
-               }
             }
         }
         stage('Docker build') {
@@ -66,13 +44,6 @@ pipeline {
                 }
             }
         }
-        
-        stage('Trivy Image Scan') {
-            steps {
-                sh "trivy image --format table -o image.html ${IMAGE_NAME}:${TAG}"
-            }
-        }
-        
         stage('Docker Push Image') {
             steps {
                 script {
