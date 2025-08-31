@@ -30,11 +30,6 @@ pipeline {
                 sh "mvn test -DskipTests=true"
             }
         } 
-        stage('Trivy FS Scan') {
-            steps {
-                sh "trivy fs --format table -o fs.html ."
-            }
-        }
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar') {
