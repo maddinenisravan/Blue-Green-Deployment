@@ -17,10 +17,15 @@ pipeline {
     stages {
         stage('Git Checkout') {
             steps {
-                git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/jaiswaladi246/3-Tier-NodeJS-MySql-Docker.git'
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/maddinenisravan/Blue-Green-Deployment.git']])
             }
         }
-        
+     stages {
+        stage('compile') {
+            steps {
+                sh "mvn compile"
+            }
+        }   
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar') {
