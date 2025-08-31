@@ -32,7 +32,7 @@ pipeline {
         } 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonar') {
+                withSonarQubeEnv(credentialsId: 'sonar-token') {
                     sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=bluegreen -Dsonar.projectName=bluegreen -Dsonar.java.binaries=target"
                 }
             }
